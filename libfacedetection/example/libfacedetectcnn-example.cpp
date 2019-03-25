@@ -93,19 +93,23 @@ int main(int argc, char* argv[])
 	//////////////////////////////////////////
 	//!!! The input image must be a RGB one (three-channel)
 	//!!! DO NOT RELEASE pResults !!!
-	clock_t t1 = clock();
-	for(int i = 0;i < nIters;i++)
+	int out_loop = 4;
+	for(int o_it = 0; o_it < out_loop;o_it++)
 	{
-		pResults = facedetect_cnn(pBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step);
-	}
-	clock_t t2 = clock();
-	double time = t2-t1;
+		clock_t t1 = clock();
+		for(int i = 0;i < nIters;i++)
+		{
+			pResults = facedetect_cnn(pBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step);
+		}
+		clock_t t2 = clock();
+		double time = t2-t1;
 #if defined(_WIN32)
-	time *= 1e-3;
+		time *= 1e-3;
 #else
-	time *= 1e-6;
+		time *= 1e-6;
 #endif
-	printf("%.3f s / %d Iters, 1 Iter costs %.3f ms\n",time,nIters, 1000.0*time/nIters);
+		printf("%.3f s / %d Iters, 1 Iter costs %.3f ms\n",time,nIters, 1000.0*time/nIters);
+	}
     printf("%d faces detected.\n", (pResults ? *pResults : 0));
 	Mat result_cnn = image.clone();
 	//print the detection results
