@@ -56,13 +56,13 @@ int main(int argc, char* argv[])
     }
 	int nIters = 1000;
 	if(argc > 2)
-		nIters = atoi(argv[1]);
+		nIters = atoi(argv[2]);
 #if !defined(_WIN32)
 	if (argc > 3)
 	{
 		cpu_set_t mask;
 		CPU_ZERO(&mask);
-		CPU_SET(atoi(argv[2]), &mask);
+		CPU_SET(atoi(argv[3]), &mask);
 		if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
 			perror("sched_setaffinity");
 		}
