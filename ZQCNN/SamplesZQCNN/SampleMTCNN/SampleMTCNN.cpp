@@ -18,6 +18,9 @@
 #else
 #pragma comment(lib,"ZQ_GEMM.lib")
 #endif
+#if !defined(_WIN32)
+#include <sched.h>
+#endif
 using namespace ZQ;
 using namespace std;
 using namespace cv;
@@ -74,8 +77,28 @@ static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_BBox106>& thirdBbox)
 	}
 }
 
-int main()
+int main(int argc, const char** argv)
 {
+	if(argc < 2)
+    {
+        printf("Usage: %s <image_file_name> [nIters] [core_id]\n", argv[0]);
+        return -1;
+    }
+	int nIters = 1000;
+	if(argc > 2)
+		nIters = atoi(argv[2]);
+#if !defined(_WIN32)
+	if (argc > 3)
+	{
+		cpu_set_t mask;
+		CPU_ZERO(&mask);
+		CPU_SET(atoi(argv[3]), &mask);
+		if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
+			perror("sched_setaffinity");
+		}
+	}
+#endif
+
 	int num_threads = 1;
 #if ZQ_CNN_USE_BLAS_GEMM
 	printf("set openblas thread_num = %d\n",num_threads);
@@ -83,52 +106,16 @@ int main()
 #elif ZQ_CNN_USE_MKL_GEMM
 	mkl_set_num_threads(num_threads);
 #endif
-#if defined(_WIN32)
-	Mat image0 = cv::imread("data/face2500.jpg", 1);
-#else
-	Mat image0 = cv::imread("../../data/face2500.jpg", 1);
-#endif
+
+	Mat image0 = cv::imread(argv[1], 1);
 	if (image0.empty())
 	{
 		cout << "empty image\n";
 		return EXIT_FAILURE;
 	}
-	//cv::resize(image0, image0, cv::Size(), 2, 2);
 	if (image0.channels() == 1)
 		cv::cvtColor(image0, image0, CV_GRAY2BGR);
-	//cv::convertScaleAbs(image0, image0, 2.0);
-	/* TIPS: when finding tiny faces for very big image, gaussian blur is very useful for Pnet*/
-	bool run_blur = true;
-	int kernel_size = 3, sigma = 2;
-	if (image0.cols * image0.rows >= 2500 * 1600)
-	{
-		run_blur = false;
-		kernel_size = 5;
-		sigma = 3;
-	}
-	else if (image0.cols * image0.rows >= 1920 * 1080)
-	{
-		run_blur = false;
-		kernel_size = 3;
-		sigma = 2;
-	}
-	else
-	{
-		run_blur = false;
-	}
-
-	if (run_blur)
-	{
-		cv::Mat blur_image0;
-		int nBlurIters = 1000;
-		double t00 = omp_get_wtime();
-		for (int i = 0; i < nBlurIters; i++)
-			cv::GaussianBlur(image0, blur_image0, cv::Size(kernel_size, kernel_size), sigma, sigma);
-		double t01 = omp_get_wtime();
-		printf("[%d] blur cost %.3f secs, 1 blur costs %.3f ms\n", nBlurIters, t01 - t00, 1000 * (t01 - t00) / nBlurIters);
-		cv::GaussianBlur(image0, image0, cv::Size(kernel_size, kernel_size), sigma, sigma);
-	}
-
+	
 	std::vector<ZQ_CNN_BBox> thirdBbox;
 	std::vector<ZQ_CNN_BBox106> thirdBbox106;
 	ZQ_CNN_MTCNN mtcnn;
@@ -213,35 +200,39 @@ int main()
 	}
 	mtcnn.TurnOffShowDebugInfo();
 	//mtcnn.TurnOnShowDebugInfo();
-	int iters = 10;
-	double t1 = omp_get_wtime();
-	for (int i = 0; i < iters; i++)
+	int out_loop = 4;
+	for(int o_it = 0; o_it < out_loop; o_it++)
 	{
-		if (i == iters / 2)
-			mtcnn.TurnOnShowDebugInfo();
-		else
-			mtcnn.TurnOffShowDebugInfo();
-		if (landmark106 && use_pnet20)
+		int iters = nIters;
+		double t1 = omp_get_wtime();
+		for (int i = 0; i < iters; i++)
 		{
-			if (!mtcnn.Find106(image0.data, image0.cols, image0.rows, image0.step[0], thirdBbox106))
+			if (i == iters / 2)
+				mtcnn.TurnOnShowDebugInfo();
+			else
+				mtcnn.TurnOffShowDebugInfo();
+			if (landmark106 && use_pnet20)
 			{
-				cout << "failed to find face!\n";
-				//return EXIT_FAILURE;
-				continue;
+				if (!mtcnn.Find106(image0.data, image0.cols, image0.rows, image0.step[0], thirdBbox106))
+				{
+					cout << "failed to find face!\n";
+					//return EXIT_FAILURE;
+					continue;
+				}
+			}
+			else
+			{
+				if (!mtcnn.Find(image0.data, image0.cols, image0.rows, image0.step[0], thirdBbox))
+				{
+					cout << "failed to find face!\n";
+					//return EXIT_FAILURE;
+					continue;
+				}
 			}
 		}
-		else
-		{
-			if (!mtcnn.Find(image0.data, image0.cols, image0.rows, image0.step[0], thirdBbox))
-			{
-				cout << "failed to find face!\n";
-				//return EXIT_FAILURE;
-				continue;
-			}
-		}
+		double t2 = omp_get_wtime();
+		printf("total %.3f s / %d = %.3f ms\n", t2 - t1, iters, 1000 * (t2 - t1) / iters);
 	}
-	double t2 = omp_get_wtime();
-	printf("total %.3f s / %d = %.3f ms\n", t2 - t1, iters, 1000 * (t2 - t1) / iters);
 
 	namedWindow("result");
 	if (landmark106 && use_pnet20)
