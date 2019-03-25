@@ -10,7 +10,7 @@ arm-linux: openblas, opencv3.4.2
 
 ## libfacedetection:下载时间2019-03-25 09:00
 
-# (一)WINDOWS下对比 (测试机器为E5-1650V4 3.6GHz)
+# (一) WINDOWS下对比 (测试机器为E5-1650V4 3.6GHz)
 
 ZQCNN用.sln打开
 
