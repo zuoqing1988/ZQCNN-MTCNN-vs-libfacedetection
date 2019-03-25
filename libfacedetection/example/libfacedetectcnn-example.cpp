@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 		rectangle(result_cnn, Rect(x, y, w, h), Scalar(0, 255, 0), 2);
 	}
 	imshow("result_cnn", result_cnn);
-
+	imwrite("result_cnn.jpg", result_cnn);
 	waitKey();
 
     //release the buffer
