@@ -37,21 +37,37 @@ the use of this software, even if advised of the possibility of such damage.
 */
 
 #include <stdio.h>
+#include <time.h>
 #include <opencv2/opencv.hpp>
 #include "facedetectcnn.h"
-
+#if !defined(_WIN32)
+#include <sched.h>
+#endif
 //define the buffer size. Do not change the size!
 #define DETECT_BUFFER_SIZE 0x20000
 using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    if(argc != 2)
+    if(argc < 2)
     {
-        printf("Usage: %s <image_file_name>\n", argv[0]);
+        printf("Usage: %s <image_file_name> [nIters] [core_id]\n", argv[0]);
         return -1;
     }
-
+	int nIters = 1000;
+	if(argc > 2)
+		nIters = atoi(argv[1]);
+#if !defined(_WIN32)
+	if (argc > 3)
+	{
+		cpu_set_t mask;
+		CPU_ZERO(&mask);
+		CPU_SET(atoi(argv[2]), &mask);
+		if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
+			perror("sched_setaffinity");
+		}
+	}
+#endif
 	//load an image and convert it to gray (single-channel)
 	Mat image = imread(argv[1]); 
 	if(image.empty())
@@ -77,8 +93,19 @@ int main(int argc, char* argv[])
 	//////////////////////////////////////////
 	//!!! The input image must be a RGB one (three-channel)
 	//!!! DO NOT RELEASE pResults !!!
-	pResults = facedetect_cnn(pBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step);
-
+	clock_t t1 = clock();
+	for(int i = 0;i < nIters;i++)
+	{
+		pResults = facedetect_cnn(pBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step);
+	}
+	clock_t t2 = clock();
+	double time = t2-t1;
+#if defined(_WIN32)
+	time *= 1e-3;
+#else
+	time *= 1e-6;
+#endif
+	printf("%.3f s / %d Iters, 1 Iter costs %.3f ms\n",time,nIters, 1000.0*time/nIters);
     printf("%d faces detected.\n", (pResults ? *pResults : 0));
 	Mat result_cnn = image.clone();
 	//print the detection results
