@@ -1,6 +1,6 @@
 # ZQCNN-MTCNN-vs-libfacedetection
 
-## ZQCNN:下载时间2019-03-25 09:00
+## [ZQCNN](https://github.com/zuoqing1988/ZQCNN):下载时间2019-03-25 09:00
 
 依赖库:
 
@@ -8,7 +8,7 @@ windows：mkl, opencv3.4.2
 
 arm-linux: openblas, opencv3.4.2
 
-## libfacedetection:下载时间2019-03-25 09:00
+## [libfacedetection](https://github.com/ShiqiYu/libfacedetection):下载时间2019-03-25 09:00
 
 # (一) WINDOWS下对比 (测试机器为E5-1650V4 3.6GHz)
 
