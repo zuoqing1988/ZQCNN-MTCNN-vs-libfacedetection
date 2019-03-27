@@ -1,5 +1,9 @@
 # ZQCNN-MTCNN-vs-libfacedetection
 
+##说明1：[libfacedetection](https://github.com/ShiqiYu/libfacedetection)的caffe模型转成ZQCNN格式之后能速度接近翻倍，请前往[ZQCNN](https://github.com/zuoqing1988/ZQCNN)项目，在SampleSSD里可以试用
+
+##说明2：[ZQCNN](https://github.com/zuoqing1988/ZQCNN)代表在不断更新，此版本会有一些小BUG，在不断修复，请下载最新版本
+
 ## [ZQCNN](https://github.com/zuoqing1988/ZQCNN):下载时间2019-03-25 09:00
 
 依赖库:
