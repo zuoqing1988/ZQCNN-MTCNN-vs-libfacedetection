@@ -1,0 +1,10 @@
+F:/Code/ncnn/examples/build/CMakeFiles/squeezenet.dir
+F:/Code/ncnn/examples/build/CMakeFiles/genderage.dir
+F:/Code/ncnn/examples/build/CMakeFiles/fasterrcnn.dir
+F:/Code/ncnn/examples/build/CMakeFiles/mobilenetv2ssdlite.dir
+F:/Code/ncnn/examples/build/CMakeFiles/yolov2.dir
+F:/Code/ncnn/examples/build/CMakeFiles/squeezenetssd.dir
+F:/Code/ncnn/examples/build/CMakeFiles/mobilenetssd.dir
+F:/Code/ncnn/examples/build/CMakeFiles/mobilefacenet.dir
+F:/Code/ncnn/examples/build/CMakeFiles/ALL_BUILD.dir
+F:/Code/ncnn/examples/build/CMakeFiles/ZERO_CHECK.dir

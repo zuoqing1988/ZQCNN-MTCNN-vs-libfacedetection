@@ -1,0 +1,30 @@
+# CMake generation dependency list for this directory.
+F:/Code/ncnn/examples/CMakeLists.txt
+F:/Code/ncnn/examples/build/CMakeFiles/3.10.2/CMakeSystem.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeSystemSpecificInitialize.cmake
+F:/Code/ncnn/examples/build/CMakeFiles/3.10.2/CMakeCCompiler.cmake
+F:/Code/ncnn/examples/build/CMakeFiles/3.10.2/CMakeCXXCompiler.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeSystemSpecificInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeGenericSystem.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/Windows.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/WindowsPaths.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeCInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/Windows-MSVC-C.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/Windows-MSVC.cmake
+F:/Code/ncnn/examples/build/CMakeFiles/3.10.2/CMakeRCCompiler.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeRCInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeCXXInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeLanguageInformation.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Compiler/MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Compiler/CMakeCommonCompilerMacros.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/Windows-MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/Platform/Windows-MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.10/Modules/CMakeCommonLanguageInclude.cmake
+F:/Code/OpenCV3.1.0/opencv/build/OpenCVConfig-version.cmake
+F:/Code/OpenCV3.1.0/opencv/build/OpenCVConfig.cmake
+F:/Code/OpenCV3.1.0/opencv/build/x64/vc14/lib/OpenCVConfig.cmake
+F:/Code/OpenCV3.1.0/opencv/build/x64/vc14/lib/OpenCVModules.cmake
+F:/Code/OpenCV3.1.0/opencv/build/x64/vc14/lib/OpenCVModules-debug.cmake
+F:/Code/OpenCV3.1.0/opencv/build/x64/vc14/lib/OpenCVModules-release.cmake

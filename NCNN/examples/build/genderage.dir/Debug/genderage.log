@@ -1,0 +1,10 @@
+﻿  genderage.cpp
+F:\Code\OpenCV3.1.0\opencv\build\include\opencv2/core/mat.hpp(1965): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+F:\Code\OpenCV3.1.0\opencv\build\include\opencv2/core/persistence.hpp : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+F:\Code\OpenCV3.1.0\opencv\build\include\opencv2/core/utility.hpp : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+F:\Code\OpenCV3.1.0\opencv\build\include\opencv2/core/utility.hpp : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+f:\code\ncnn\src\mat.h(278): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+F:\Code\ncnn\examples\genderage.cpp(34): warning C4838: 从“double”转换到“const float”需要收缩转换
+F:\Code\ncnn\examples\genderage.cpp(34): warning C4305: “初始化”: 从“double”到“const float”截断
+  genderage.vcxproj -> F:\Code\ncnn\examples\build\Debug\genderage.exe
+  genderage.vcxproj -> F:/Code/ncnn/examples/build/Debug/genderage.pdb (Full PDB)

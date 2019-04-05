@@ -1,0 +1,21 @@
+7767517
+19 20
+Input            data                             0 1 data
+Convolution      conv1                            1 1 data conv1 0=8 1=3 11=3 3=2 13=2 5=1 6=216
+PReLU            prelu1                           1 1 conv1 prelu1 0=8
+ConvolutionDepthWise conv2_dw                         1 1 prelu1 conv2_dw 0=8 1=3 11=3 5=1 6=72 7=8
+PReLU            prelu2_dw                        1 1 conv2_dw prelu2_dw 0=8
+Convolution      conv2_sep                        1 1 prelu2_dw conv2_sep 0=16 1=1 11=1 5=1 6=128
+PReLU            prelu2                           1 1 conv2_sep prelu2 0=16
+ConvolutionDepthWise conv3_dw                         1 1 prelu2 conv3_dw 0=16 1=3 11=3 3=2 13=2 5=1 6=144 7=16
+PReLU            prelu3_dw                        1 1 conv3_dw prelu3_dw 0=16
+Convolution      conv3_sep                        1 1 prelu3_dw conv3_sep 0=24 1=1 11=1 5=1 6=384
+PReLU            prelu3                           1 1 conv3_sep prelu3 0=24
+ConvolutionDepthWise conv4_dw                         1 1 prelu3 conv4_dw 0=24 1=3 11=3 5=1 6=216 7=24
+PReLU            prelu4_dw                        1 1 conv4_dw prelu4_dw 0=24
+Split            splitncnn_0                      1 2 prelu4_dw prelu4_dw_splitncnn_0 prelu4_dw_splitncnn_1
+Convolution      conv4_1                          1 1 prelu4_dw_splitncnn_1 conv4_1 0=2 1=1 11=1 5=1 6=48
+BatchNorm        bn4_1                            1 1 conv4_1 bn4_1 0=2
+Softmax          cls_prob                         1 1 bn4_1 prob1 1=1
+Convolution      conv4_2                          1 1 prelu4_dw_splitncnn_0 conv4_2 0=4 1=1 11=1 5=1 6=96
+BatchNorm        bn4_2                            1 1 conv4_2 conv4-2 0=4
