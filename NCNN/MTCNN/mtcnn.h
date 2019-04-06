@@ -368,7 +368,7 @@ private:
 		for (size_t i = 0; i < scales_.size(); i++) {
 			int hs = (int)ceil(img_h*scales_[i]);
 			int ws = (int)ceil(img_w*scales_[i]);
-			printf("hxw = %dx%d\n", hs, ws);
+			//printf("hxw = %dx%d\n", hs, ws);
 			ncnn::Mat in;
 			resize_bilinear(img, in, ws, hs);
 			ncnn::Extractor ex = Pnet.create_extractor();
