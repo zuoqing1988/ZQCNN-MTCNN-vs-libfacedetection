@@ -8,6 +8,13 @@
 #include <stdlib.h>
 #include <algorithm>
 
+#ifndef __max
+#define __max(x,y) ((x>y)?(x):(y))
+#endif
+#ifndef __min
+#define __min(x,y) ((x<y)?(x):(y))
+#endif
+
 namespace ZQ
 {
 	class ZQ_CNN_BBoxUtils
