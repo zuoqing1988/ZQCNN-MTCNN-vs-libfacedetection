@@ -10,7 +10,6 @@ namespace ZQ
 	class ZQ_CNN_MTCNN_ncnn
 	{
 	public:
-		using string = std::string;
 		ZQ_CNN_MTCNN_ncnn()
 		{
 			min_size = 60;
