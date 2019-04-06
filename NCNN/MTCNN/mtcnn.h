@@ -285,12 +285,7 @@ private:
 				
 				overlap_num.push_back(cur_overlap);
 			}
-			for (int i = 0; i < heros.size(); i++)
-			{
-				if(!boundingBox[heros[i]].need_check_overlap_count 
-					|| overlap_num[i] >= overlap_count_thresh)
-					boundingBox[heros[i]].exist = true;
-			}
+			
 			//clear exist= false;
 			for (int i = boundingBox.size() - 1; i >= 0; i--)
 			{
@@ -308,6 +303,7 @@ private:
 		std::vector<ZQ_CNN_OrderScore> order_score(num);
 		for(int i = 0;i < num;i++)
 		{
+			boundingBox_[i].exist = true;
 			order_score[i].score = boundingBox_[i].score;
 			order_score[i].oriOrder = i;
 		}
