@@ -105,7 +105,7 @@ namespace ZQ
 		}
 
 		static void _nms(std::vector<ZQ_CNN_BBox> &boundingBox, std::vector<ZQ_CNN_OrderScore> &bboxScore, const float overlap_threshold,
-			const std::string& modelname = "Union", int overlap_count_thresh = 0, int thread_num = 1)
+			const std::string& modelname = "Union", int overlap_count_thresh = 0)
 		{
 			if (boundingBox.empty() || overlap_threshold >= 1.0)
 			{
@@ -131,88 +131,46 @@ namespace ZQ
 				int cur_overlap = 0;
 				boundingBox[order].exist = false;//delete it
 				int box_num = boundingBox.size();
-				if (thread_num == 1)
+
+				for (int num = 0; num < box_num; num++)
 				{
-					for (int num = 0; num < box_num; num++)
+					if (boundingBox[num].exist)
 					{
-						if (boundingBox[num].exist)
+						//the iou
+						maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
+						maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
+						minY = __min(boundingBox[num].row2, boundingBox[order].row2);
+						minX = __min(boundingBox[num].col2, boundingBox[order].col2);
+						//maxX1 and maxY1 reuse 
+						maxX = __max(minX - maxX + 1, 0);
+						maxY = __max(minY - maxY + 1, 0);
+						//IOU reuse for the area of two bbox
+						IOU = maxX * maxY;
+						float area1 = boundingBox[num].area;
+						float area2 = boundingBox[order].area;
+						if (!modelname.compare("Union"))
+							IOU = IOU / (area1 + area2 - IOU);
+						else if (!modelname.compare("Min"))
 						{
-							//the iou
-							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
-							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
-							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
-							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
-							//maxX1 and maxY1 reuse 
-							maxX = __max(minX - maxX + 1, 0);
-							maxY = __max(minY - maxY + 1, 0);
-							//IOU reuse for the area of two bbox
-							IOU = maxX * maxY;
-							float area1 = boundingBox[num].area;
-							float area2 = boundingBox[order].area;
-							if (!modelname.compare("Union"))
-								IOU = IOU / (area1 + area2 - IOU);
-							else if (!modelname.compare("Min"))
+							IOU = IOU / __min(area1, area2);
+						}
+						if (IOU > overlap_threshold)
+						{
+							cur_overlap++;
+							boundingBox[num].exist = false;
+							for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
 							{
-								IOU = IOU / __min(area1, area2);
-							}
-							if (IOU > overlap_threshold)
-							{
-								cur_overlap++;
-								boundingBox[num].exist = false;
-								for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
+								if ((*it).oriOrder == num)
 								{
-									if ((*it).oriOrder == num)
-									{
-										(*it).oriOrder = -1;
-										break;
-									}
+									(*it).oriOrder = -1;
+									break;
 								}
 							}
 						}
 					}
 				}
-				else
-				{
-					int chunk_size = ceil(box_num / thread_num);
-#pragma omp parallel for schedule(static, chunk_size) num_threads(thread_num)
-					for (int num = 0; num < box_num; num++)
-					{
-						if (boundingBox.at(num).exist)
-						{
-							//the iou
-							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
-							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
-							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
-							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
-							//maxX1 and maxY1 reuse 
-							maxX = __max(minX - maxX + 1, 0);
-							maxY = __max(minY - maxY + 1, 0);
-							//IOU reuse for the area of two bbox
-							IOU = maxX * maxY;
-							float area1 = boundingBox[num].area;
-							float area2 = boundingBox[order].area;
-							if (!modelname.compare("Union"))
-								IOU = IOU / (area1 + area2 - IOU);
-							else if (!modelname.compare("Min"))
-							{
-								IOU = IOU / __min(area1, area2);
-							}
-							if (IOU > overlap_threshold)
-							{
-								cur_overlap++;
-								boundingBox.at(num).exist = false;
-								for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
-								{
-									if ((*it).oriOrder == num)
-									{
-										(*it).oriOrder = -1;
-										break;
-									}
-								}
-							}
-						}
-					}
-				}
+
+				
 				overlap_num.push_back(cur_overlap);
 			}
 			for (int i = 0; i < heros.size(); i++)
