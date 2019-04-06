@@ -340,12 +340,9 @@ namespace ZQ
 		}
 
 	private:
-#if __ARM_NEON
-		const int BATCH_SIZE = 16;
-#else
-		const int BATCH_SIZE = 64;
-#endif
 		std::vector<ncnn::Net> pnet, rnet, onet, lnet;
+		std::vector<ncnn::UnlockedPoolAllocator> g_blob_pool_allocator;
+		std::vector<ncnn::UnlockedPoolAllocator> g_workspace_pool_allocator;
 		bool has_lnet;
 		int thread_num;
 		float thresh[3], nms_thresh[3];
@@ -370,6 +367,7 @@ namespace ZQ
 		int limit_r_num;
 		int limit_o_num;
 		int limit_l_num;
+		
 	public:
 		void TurnOnShowDebugInfo() { show_debug_info = true; }
 		void TurnOffShowDebugInfo() { show_debug_info = false; }
@@ -420,6 +418,10 @@ namespace ZQ
 			{
 				lnet.resize(thread_num);
 			}
+			
+			g_blob_pool_allocator.resize(thread_num);
+			g_workspace_pool_allocator.resize(thread_num);
+			
 			bool ret = true;
 			for (int i = 0; i < thread_num; i++)
 			{
@@ -442,7 +444,11 @@ namespace ZQ
 			}
 			else
 				this->thread_num = thread_num;
-
+			for (int i = 0; i < thread_num; i++)
+			{
+				g_blob_pool_allocator[i].clear();
+				g_workspace_pool_allocator[i].clear();
+			}
 			return ret;
 		}
 
@@ -594,6 +600,9 @@ namespace ZQ
 				double t11 = omp_get_wtime();
 				ncnn::Extractor ex = pnet[0].create_extractor();
 				ex.set_light_mode(true);
+				ex.set_blob_allocator(&g_blob_pool_allocator[0]);
+				ex.set_workspace_allocator(&g_workspace_pool_allocator[0]);
+				ex.set_num_threads(1);
 				if (scales[i] == 1)
 					ex.input("data", input);
 				else
@@ -757,6 +766,9 @@ namespace ZQ
 
 					ncnn::Extractor ex = pnet[thread_id].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[0]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[0]);
+					ex.set_num_threads(1);
 					ex.input("data", task_pnet_images[thread_id]);
 					ncnn::Mat score, location;
 					ex.extract("prob1", score);
@@ -810,6 +822,8 @@ namespace ZQ
 
 					ncnn::Extractor ex = pnet[thread_id].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[thread_id]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[thread_id]);
 					ex.input("data", task_pnet_images[thread_id]);
 					ncnn::Mat score, location;
 					ex.extract("prob1", score);
@@ -1153,6 +1167,9 @@ namespace ZQ
 					resize_bilinear(tempIm, task_rnet_images, 24, 24);
 					ncnn::Extractor ex = rnet[0].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[0]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[0]);
+					ex.set_num_threads(1);
 					ex.input("data", task_rnet_images);
 					ncnn::Mat score, bbox, keyPoint;
 					ex.extract("prob1", score);
@@ -1175,12 +1192,16 @@ namespace ZQ
 #pragma omp parallel for num_threads(thread_num) schedule(dynamic,1)
 				for (int pp = 0; pp < r_count; pp++)
 				{
+					int thread_id = omp_get_thread_num();
 					ncnn::Mat task_rnet_images;
 					ncnn::Mat tempIm;
 					copy_cut_border(input, tempIm, src_off_y[pp], input.h - src_off_y[pp] - src_rect_h[pp], src_off_x[pp], input.w - src_off_x[pp] - src_rect_w[pp]);
 					resize_bilinear(tempIm, task_rnet_images, 24, 24);
-					ncnn::Extractor ex = rnet[pp].create_extractor();
+					ncnn::Extractor ex = rnet[thread_id].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[thread_id]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[thread_id]);
+					ex.set_num_threads(1);
 					ex.input("data", task_rnet_images);
 					ncnn::Mat score, bbox, keyPoint;
 					ex.extract("prob1", score);
@@ -1273,6 +1294,9 @@ namespace ZQ
 					resize_bilinear(tempIm, task_onet_images, 48, 48);
 					ncnn::Extractor ex = onet[0].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[0]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[0]);
+					ex.set_num_threads(1);
 					ex.input("data", task_onet_images);
 					ncnn::Mat score, bbox, keyPoint;
 					ex.extract("prob1", score);
@@ -1295,13 +1319,17 @@ namespace ZQ
 #pragma omp parallel for num_threads(thread_num) schedule(dynamic,1)
 				for (int pp = 0; pp < o_count; pp++)
 				{
+					int thread_id = omp_get_thread_num();
 					ncnn::Mat task_onet_images;
 					ncnn::Mat tempIm;
 					copy_cut_border(input, tempIm, src_off_y[pp], input.h - src_off_y[pp] - src_rect_h[pp], src_off_x[pp],
 						input.w - src_off_x[pp] - src_rect_w[pp]);
 					resize_bilinear(tempIm, task_onet_images, 48, 48);
-					ncnn::Extractor ex = onet[pp].create_extractor();
+					ncnn::Extractor ex = onet[thread_id].create_extractor();
 					ex.set_light_mode(true);
+					ex.set_blob_allocator(&g_blob_pool_allocator[thread_id]);
+					ex.set_workspace_allocator(&g_workspace_pool_allocator[thread_id]);
+					ex.set_num_threads(1);
 					ex.input("data", task_onet_images);
 					ncnn::Mat score, bbox, keyPoint;
 					ex.extract("prob1", score);

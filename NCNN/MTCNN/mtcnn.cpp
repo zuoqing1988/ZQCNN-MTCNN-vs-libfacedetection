@@ -36,7 +36,7 @@ static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_MTCNN_ncnn::ZQ_CNN_BBo
 
 int main(int argc, char** argv)
 {
-	int thread_num = 1;
+	int thread_num = 2;
 #if !defined(_WIN32)
 	if (argc > 1)
 	{
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 	int min_size = 20;
 
 #if defined(_WIN32)
-	Mat image0 = cv::imread("../../../images/test2.jpg", 1);
+	Mat image0 = cv::imread("../../../images/4.jpg", 1);
 #else
 	Mat image0 = cv::imread("../../../images/test2.jpg", 1);
 #endif
@@ -70,6 +70,21 @@ int main(int argc, char** argv)
 		cout << "empty image\n";
 		return EXIT_FAILURE;
 	}
+
+	static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
+	static ncnn::UnlockedPoolAllocator g_workspace_pool_allocator;
+	ncnn::Option opt;
+	opt.lightmode = true;
+	opt.num_threads = 1;
+	opt.blob_allocator = &g_blob_pool_allocator;
+	opt.workspace_allocator = &g_workspace_pool_allocator;
+	ncnn::set_default_option(opt);
+	ncnn::set_cpu_powersave(0);
+	ncnn::set_omp_dynamic(0);
+	ncnn::set_omp_num_threads(1);
+	g_blob_pool_allocator.clear();
+	g_workspace_pool_allocator.clear();
+
 	//cv::resize(image0, image0, cv::Size(), 2, 2);
 	if (image0.channels() == 1)
 		cv::cvtColor(image0, image0, CV_GRAY2BGR);
@@ -111,30 +126,17 @@ int main(int argc, char** argv)
 	std::string result_name;
 	mtcnn.TurnOnShowDebugInfo();
 	//mtcnn.SetLimit(300, 50, 20);
-
+	
 	
 	bool special_handle_very_big_face = false;
 	result_name = "resultdet.jpg";
-	static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
-	static ncnn::PoolAllocator g_workspace_pool_allocator;
-
-	ncnn::Option opt;
-	opt.lightmode = true;
-	opt.num_threads = 1;
-	opt.blob_allocator = &g_blob_pool_allocator;
-	opt.workspace_allocator = &g_workspace_pool_allocator;
-	ncnn::set_default_option(opt);
-	ncnn::set_cpu_powersave(0);
-	ncnn::set_omp_dynamic(0);
-	ncnn::set_omp_num_threads(1);
-
-
+	
 #if defined(_WIN32)
-	if (!mtcnn.Init("../model/det1-dw20-fast.ncnnparam", "../model/det1-dw20-fast.ncnnbin",
-		"../model/det2-dw24-fast.ncnnparam", "../model/det2-dw24-fast.ncnnbin",
-		"../model/det3-dw48-fast.ncnnparam", "../model/det3-dw48-fast.ncnnbin",
+	if (!mtcnn.Init("../../model/det1-dw20-fast.ncnnparam", "../../model/det1-dw20-fast.ncnnbin",
+		"../../model/det2-dw24-fast.ncnnparam", "../../model/det2-dw24-fast.ncnnbin",
+		"../../model/det3-dw48-fast.ncnnparam", "../../model/det3-dw48-fast.ncnnbin",
 		thread_num, false,
-		"../model/det4-dw48-v2n.ncnnparam", "../model/det4-dw48-v2n.ncnnbin"
+		"../../model/det4-dw48-v2n.ncnnparam", "../../model/det4-dw48-v2n.ncnnbin"
 #else
 	if (!mtcnn.Init("../../model/det1-dw20-fast.ncnnparam", "../../model/det1-dw20-fast.ncnnbin",
 		"../../model/det2-dw24-fast.ncnnparam", "../../model/det2-dw24-fast.ncnnbin",
@@ -149,9 +151,7 @@ int main(int argc, char** argv)
 	}
 	mtcnn.SetPara(image0.cols, image0.rows, min_size, 0.5, 0.6, 0.8, 0.4, 0.5, 0.5, 0.709, 3, 20, 4, special_handle_very_big_face);
 
-	g_blob_pool_allocator.clear();
-	g_workspace_pool_allocator.clear();
-
+	
 	/****************************************/
 	mtcnn.TurnOffShowDebugInfo();
 	//mtcnn.TurnOnShowDebugInfo();
