@@ -1,74 +1,163 @@
-#include "mtcnn.h"
-#include <opencv2/opencv.hpp>
-
-
+#include "net.h"
+#include "cpu.h"
+#include "ZQ_CNN_MTCNN_ncnn.h"
+#include <vector>
+#include <iostream>
+#include "opencv2/opencv.hpp"
+using namespace ZQ;
+using namespace std;
 using namespace cv;
 
-int main(int argc, const char** argv)
+static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_BBox>& thirdBbox)
 {
-	if (argc < 2)
+	std::vector<ZQ_CNN_BBox>::const_iterator it = thirdBbox.begin();
+	for (; it != thirdBbox.end(); it++)
 	{
-		printf("Usage: %s <image_file_name> [nIters] [core_id]\n", argv[0]);
-		return -1;
-	}
-	int nIters = 1000;
-	if (argc > 2)
-		nIters = atoi(argv[2]);
-#if !defined(_WIN32)
-	if (argc > 3)
-	{
-		cpu_set_t mask;
-		CPU_ZERO(&mask);
-		CPU_SET(atoi(argv[3]), &mask);
-		if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
-			perror("sched_setaffinity");
+		if ((*it).exist)
+		{
+			if (it->score > 0.7)
+			{
+				cv::rectangle(image, cv::Point((*it).col1, (*it).row1), cv::Point((*it).col2, (*it).row2), cv::Scalar(0, 0, 255), 2, 8, 0);
+			}
+			else
+			{
+				cv::rectangle(image, cv::Point((*it).col1, (*it).row1), cv::Point((*it).col2, (*it).row2), cv::Scalar(0, 255, 0), 2, 8, 0);
+			}
+
+			for (int num = 0; num < 5; num++)
+				circle(image, cv::Point(*(it->ppoint + num) + 0.5f, *(it->ppoint + num + 5) + 0.5f), 1, cv::Scalar(0, 255, 255), -1);
+		}
+		else
+		{
+			printf("not exist!\n");
 		}
 	}
-#endif
-	char *model_path = "../models";
-	MTCNN mtcnn(model_path, 20, 4);
+}
 
-	cv::Mat image;
-	image = cv::imread(argv[1]);
-	int out_it = 4;
+int main()
+{
+	int thread_num = 0;
+	int iters = 100;
 	int min_size = 20;
 
-	std::vector<Bbox> finalBbox;
-	for (int o_it = 0; o_it < out_it; o_it++)
-	{
-		clock_t t1 = clock();
-		for (int i = 0; i < nIters; i++)
-		{
-			ncnn::Mat ncnn_img = ncnn::Mat::from_pixels(image.data, ncnn::Mat::PIXEL_BGR, image.cols, image.rows);
-			mtcnn.detect(ncnn_img, finalBbox, min_size, i == (nIters / 2));
-		}
-		clock_t t2 = clock();
 #if defined(_WIN32)
-		double time = 1e-3*(t2 - t1);
+	Mat image0 = cv::imread("../../images/4.jpg", 1);
 #else
-		double time = 1e-6*(t2 - t1);
+	Mat image0 = cv::imread("../../images/11.jpg", 1);
 #endif
-
-		printf("total: %.3f s / %d = %.3f ms\n", time, nIters, 1e3*time / nIters);
+	if (image0.empty())
+	{
+		cout << "empty image\n";
+		return EXIT_FAILURE;
+	}
+	//cv::resize(image0, image0, cv::Size(), 2, 2);
+	if (image0.channels() == 1)
+		cv::cvtColor(image0, image0, CV_GRAY2BGR);
+	//cv::convertScaleAbs(image0, image0, 2.0);
+	/* TIPS: when finding tiny faces for very big image, gaussian blur is very useful for Pnet*/
+	bool run_blur = true;
+	int kernel_size = 3, sigma = 2;
+	if (image0.cols * image0.rows >= 2500 * 1600)
+	{
+		run_blur = false;
+		kernel_size = 5;
+		sigma = 3;
+	}
+	else if (image0.cols * image0.rows >= 1920 * 1080)
+	{
+		run_blur = false;
+		kernel_size = 3;
+		sigma = 2;
+	}
+	else
+	{
+		run_blur = false;
 	}
 
-	const int num_box = finalBbox.size();
-	std::vector<cv::Rect> bbox;
-	bbox.resize(num_box);
-	for (int i = 0; i < num_box; i++) {
-		bbox[i] = cv::Rect(finalBbox[i].x1, finalBbox[i].y1, finalBbox[i].x2 - finalBbox[i].x1 + 1, finalBbox[i].y2 - finalBbox[i].y1 + 1);
+	if (run_blur)
+	{
+		cv::Mat blur_image0;
+		int nBlurIters = 1000;
+		double t00 = omp_get_wtime();
+		for (int i = 0; i < nBlurIters; i++)
+			cv::GaussianBlur(image0, blur_image0, cv::Size(kernel_size, kernel_size), sigma, sigma);
+		double t01 = omp_get_wtime();
+		printf("[%d] blur cost %.3f secs, 1 blur costs %.3f ms\n", nBlurIters, t01 - t00, 1000 * (t01 - t00) / nBlurIters);
+		cv::GaussianBlur(image0, image0, cv::Size(kernel_size, kernel_size), sigma, sigma);
+	}
 
-		for (int j = 0; j < 5; j = j + 1)
+	std::vector<ZQ_CNN_BBox> thirdBbox;
+	ZQ_CNN_MTCNN_ncnn mtcnn;
+	std::string result_name;
+	mtcnn.TurnOnShowDebugInfo();
+	//mtcnn.SetLimit(300, 50, 20);
+
+	
+	bool special_handle_very_big_face = false;
+	result_name = "resultdet.jpg";
+	static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
+	static ncnn::PoolAllocator g_workspace_pool_allocator;
+
+	ncnn::Option opt;
+	opt.lightmode = true;
+	opt.num_threads = 1;
+	opt.blob_allocator = &g_blob_pool_allocator;
+	opt.workspace_allocator = &g_workspace_pool_allocator;
+	ncnn::set_default_option(opt);
+	ncnn::set_cpu_powersave(0);
+	ncnn::set_omp_dynamic(0);
+	ncnn::set_omp_num_threads(1);
+
+
+#if defined(_WIN32)
+	if (!mtcnn.Init("../model/det1-dw20-fast.ncnnparam", "../model/det1-dw20-fast.ncnnbin",
+		"../model/det2-dw24-fast.ncnnparam", "../model/det2-dw24-fast.ncnnbin",
+		"../model/det3-dw48-fast.ncnnparam", "../model/det3-dw48-fast.ncnnbin",
+		thread_num, false,
+		"../model/det4-dw48-v2n.ncnnparam", "../model/det4-dw48-v2n.ncnnbin"
+#else
+	if (!mtcnn.Init("../../model/det1-dw20-fast.ncnnparam", "../../model/det1-dw20-fast.ncnnbin",
+		"../../model/det2-dw24-fast.ncnnparam", "../../model/det2-dw24-fast.ncnnbin",
+		"../../model/det3-dw48-fast.ncnnparam", "../../model/det3-dw48-fast.ncnnbin",
+		thread_num, false,
+		"model/det4-dw48-v2s.ncnnparam", "model/det4-dw48-v2s.ncnnbin"
+#endif
+	))
+	{
+		cout << "failed to init!\n";
+		return EXIT_FAILURE;
+	}
+	mtcnn.SetPara(image0.cols, image0.rows, min_size, 0.5, 0.6, 0.8, 0.4, 0.5, 0.5, 0.709, 3, 20, 4, special_handle_very_big_face);
+
+	g_blob_pool_allocator.clear();
+	g_workspace_pool_allocator.clear();
+
+	/****************************************/
+	mtcnn.TurnOffShowDebugInfo();
+	//mtcnn.TurnOnShowDebugInfo();
+	double t1 = omp_get_wtime();
+	for (int i = 0; i < iters; i++)
+	{
+		if (i == iters / 2)
+			mtcnn.TurnOnShowDebugInfo();
+		else
+			mtcnn.TurnOffShowDebugInfo();
+
+		if (!mtcnn.Find(image0.data, image0.cols, image0.rows, image0.step[0], thirdBbox))
 		{
-			cv::circle(image, cvPoint(finalBbox[i].ppoint[j], finalBbox[i].ppoint[j + 5]), 2, CV_RGB(0, 255, 0), CV_FILLED);
+			cout << "failed to find face!\n";
+			//return EXIT_FAILURE;
+			continue;
 		}
 	}
-	for (vector<cv::Rect>::iterator it = bbox.begin(); it != bbox.end(); it++) {
-		rectangle(image, (*it), Scalar(0, 0, 255), 2, 8, 0);
-	}
+	double t2 = omp_get_wtime();
+	printf("total %.3f s / %d = %.3f ms\n", t2 - t1, iters, 1000 * (t2 - t1) / iters);
 
-	imshow("face_detection", image);
+	namedWindow("result");
+	Draw(image0, thirdBbox);
+	imwrite(result_name, image0);
+	imshow("result", image0);
 
-	cv::waitKey(0);
-	return 0;
+	waitKey(0);
+	return EXIT_SUCCESS;
 }
