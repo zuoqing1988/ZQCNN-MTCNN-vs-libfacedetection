@@ -308,7 +308,7 @@ private:
 		std::vector<ZQ_CNN_OrderScore> order_score(num);
 		for(int i = 0;i < num;i++)
 		{
-			order_score[i].score = boundingBox[i]_.score;
+			order_score[i].score = boundingBox_[i].score;
 			order_score[i].oriOrder = i;
 		}
 		_nms(boundingBox_, order_score, overlap_threshold, modelname,0);
