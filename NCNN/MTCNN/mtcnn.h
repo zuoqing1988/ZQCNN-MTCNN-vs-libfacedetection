@@ -15,6 +15,15 @@
 #include <iostream>
 using namespace std;
 //using namespace cv;
+
+#ifndef __min
+#define __min(x,y) ((x<y)?(x):(y))
+#endif
+
+#ifndef __max
+#define __max(x,y) ((x>y)?(x):(y))
+#endif
+
 struct Bbox
 {
 	float score;
