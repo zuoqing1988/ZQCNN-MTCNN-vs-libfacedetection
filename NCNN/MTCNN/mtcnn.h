@@ -130,21 +130,21 @@ public:
 		if (firstBbox_.size() < 1) return;
 		nms(firstBbox_, nms_threshold[0]);
 		refine(firstBbox_, img_h, img_w, true);
-		printf("firstBbox_.size()=%d\n", firstBbox_.size());
+		//printf("firstBbox_.size()=%d\n", firstBbox_.size());
 
 		clock_t t4 = clock();
 		//second stage
 		RNet();
 		clock_t t5 = clock();
-		printf("secondBbox_.size()=%d\n", secondBbox_.size());
+		//printf("secondBbox_.size()=%d\n", secondBbox_.size());
 		if (secondBbox_.size() < 1) return;
-		nms(secondBbox_, nms_threshold[1]);
+		nms(secondBbox_, nms_threshold[1], "Min");
 		refine(secondBbox_, img_h, img_w, true);
 		clock_t t6 = clock();
 		//third stage 
 		ONet();
 		clock_t t7 = clock();
-		printf("thirdBbox_.size()=%d\n", thirdBbox_.size());
+		//printf("thirdBbox_.size()=%d\n", thirdBbox_.size());
 		if (thirdBbox_.size() < 1) return;
 		refine(thirdBbox_, img_h, img_w, true);
 		nms(thirdBbox_, nms_threshold[2], "Min");
@@ -299,7 +299,10 @@ private:
 
 			overlap_num.push_back(cur_overlap);
 		}
-
+		for (int i = 0; i < heros.size(); i++)
+		{
+			boundingBox[heros[i]].exist = true;
+		}
 		//clear exist= false;
 		for (int i = boundingBox.size() - 1; i >= 0; i--)
 		{
@@ -464,7 +467,7 @@ private:
 	ncnn::Net Pnet, Rnet, Onet;
 	ncnn::Mat img;
 
-	const float nms_threshold[3] = { 0.5f, 0.7f, 0.7f };
+	const float nms_threshold[3] = { 0.4f, 0.5f, 0.5f };
 	const float mean_vals[3] = { 127.5, 127.5, 127.5 };
 	const float norm_vals[3] = { 0.0078125, 0.0078125, 0.0078125 };
 	int MIN_DET_SIZE;

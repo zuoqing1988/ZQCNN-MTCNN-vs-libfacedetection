@@ -39,8 +39,8 @@ int main(int argc, const char** argv)
 		clock_t t1 = clock();
 		for (int i = 0; i < nIters; i++)
 		{
-			ncnn::Mat ncnn_img = ncnn::Mat::from_pixels(image.data, ncnn::Mat::PIXEL_BGR2RGB, image.cols, image.rows);
-			mtcnn.detect(ncnn_img, finalBbox, min_size, i == nIters / 2);
+			ncnn::Mat ncnn_img = ncnn::Mat::from_pixels(image.data, ncnn::Mat::PIXEL_BGR, image.cols, image.rows);
+			mtcnn.detect(ncnn_img, finalBbox, min_size, i == (nIters / 2));
 		}
 		clock_t t2 = clock();
 #if defined(_WIN32)
