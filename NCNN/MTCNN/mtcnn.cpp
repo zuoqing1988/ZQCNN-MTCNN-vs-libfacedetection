@@ -61,9 +61,9 @@ int main(int argc, char** argv)
 	int min_size = 20;
 
 #if defined(_WIN32)
-	Mat image0 = cv::imread("../../images/test2.jpg", 1);
+	Mat image0 = cv::imread("../../../images/test2.jpg", 1);
 #else
-	Mat image0 = cv::imread("../../images/test2.jpg", 1);
+	Mat image0 = cv::imread("../../../images/test2.jpg", 1);
 #endif
 	if (image0.empty())
 	{
