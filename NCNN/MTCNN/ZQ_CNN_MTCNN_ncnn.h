@@ -4,6 +4,12 @@
 #include "net.h"
 #include "ZQ_CNN_BBoxUtils.h"
 #include <omp.h>
+#ifndef __max
+#define __max(x,y) ((x>y)?(x):(y))
+#endif
+#ifndef __min
+#define __min(x,y) ((x<y)?(x):(y))
+#endif
 namespace ZQ
 {
 	class ZQ_CNN_MTCNN_ncnn
