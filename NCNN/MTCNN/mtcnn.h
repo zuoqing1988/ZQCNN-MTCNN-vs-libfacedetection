@@ -36,22 +36,21 @@ struct Bbox
 	float regreCoord[4];
 };
 
-
-class MTCNN {
-
-	static bool cmpScore(Bbox lsh, Bbox rsh) {
+bool cmpScore(Bbox lsh, Bbox rsh) {
 		if (lsh.score < rsh.score)
 			return true;
 		else
 			return false;
 	}
-
-	static bool cmpArea(Bbox lsh, Bbox rsh) {
+	
+bool cmpArea(Bbox lsh, Bbox rsh) {
 		if (lsh.area < rsh.area)
 			return false;
 		else
 			return true;
 	}
+
+class MTCNN {
 
 public:
 	MTCNN(const string &model_path, int pnet_size = 20, int stride = 4)
@@ -212,7 +211,7 @@ private:
 		if (boundingBox_.empty()) {
 			return;
 		}
-		sort(boundingBox_.begin(), boundingBox_.end(), MTCNN::cmpScore);
+		sort(boundingBox_.begin(), boundingBox_.end(), cmpScore);
 		float IOU = 0;
 		float maxX = 0;
 		float maxY = 0;
