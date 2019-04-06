@@ -8,9 +8,9 @@ using namespace ZQ;
 using namespace std;
 using namespace cv;
 
-static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_BBox>& thirdBbox)
+static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_MTCNN_ncnn::ZQ_CNN_BBox>& thirdBbox)
 {
-	std::vector<ZQ_CNN_BBox>::const_iterator it = thirdBbox.begin();
+	std::vector<ZQ_CNN_MTCNN_ncnn::ZQ_CNN_BBox>::const_iterator it = thirdBbox.begin();
 	for (; it != thirdBbox.end(); it++)
 	{
 		if ((*it).exist)
@@ -86,7 +86,7 @@ int main()
 		cv::GaussianBlur(image0, image0, cv::Size(kernel_size, kernel_size), sigma, sigma);
 	}
 
-	std::vector<ZQ_CNN_BBox> thirdBbox;
+	std::vector<ZQ_CNN_MTCNN_ncnn::ZQ_CNN_BBox> thirdBbox;
 	ZQ_CNN_MTCNN_ncnn mtcnn;
 	std::string result_name;
 	mtcnn.TurnOnShowDebugInfo();
