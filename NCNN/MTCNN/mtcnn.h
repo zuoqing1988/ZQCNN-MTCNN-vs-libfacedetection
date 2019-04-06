@@ -250,10 +250,10 @@ private:
 						if (boundingBox[num].exist)
 						{
 							//the iou
-							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
-							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
-							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
-							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
+							maxY = __max(boundingBox[num].y1, boundingBox[order].y1);
+							maxX = __max(boundingBox[num].x1, boundingBox[order].x1);
+							minY = __min(boundingBox[num].y2, boundingBox[order].y2);
+							minX = __min(boundingBox[num].x2, boundingBox[order].x2);
 							//maxX1 and maxY1 reuse 
 							maxX = __max(minX - maxX + 1, 0);
 							maxY = __max(minY - maxY + 1, 0);
