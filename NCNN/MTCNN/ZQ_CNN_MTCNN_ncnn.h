@@ -85,7 +85,7 @@ namespace ZQ
 		}
 
 	private:
-		static bool _load(ncnn::Net& net, const string& param, const string& model)
+		static bool _load(ncnn::Net& net, const std::string& param, const std::string& model)
 		{
 			if (-1 == net.load_param(param.c_str()))
 				return false;
