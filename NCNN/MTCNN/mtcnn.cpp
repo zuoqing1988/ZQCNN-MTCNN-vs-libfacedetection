@@ -34,16 +34,36 @@ static void Draw(cv::Mat &image, const std::vector<ZQ_CNN_MTCNN_ncnn::ZQ_CNN_BBo
 	}
 }
 
-int main()
+int main(int argc, char** argv)
 {
-	int thread_num = 0;
+	int thread_num = 1;
+#if !defined(_WIN32)
+	if (argc > 1)
+	{
+		int core_id = atoi(argv[1]);
+		if (core_id >= 0)
+		{
+			cpu_set_t mask;
+			CPU_ZERO(&mask);
+			CPU_SET(atoi(argv[1]), &mask);
+			if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
+				perror("sched_setaffinity");
+			}
+		}
+	}
+
+	if (argc > 2)
+		thread_num = atoi(argv[2]);
+
+#endif
+
 	int iters = 100;
 	int min_size = 20;
 
 #if defined(_WIN32)
-	Mat image0 = cv::imread("../../images/4.jpg", 1);
+	Mat image0 = cv::imread("../../images/test2.jpg", 1);
 #else
-	Mat image0 = cv::imread("../../images/11.jpg", 1);
+	Mat image0 = cv::imread("../../images/test2.jpg", 1);
 #endif
 	if (image0.empty())
 	{
