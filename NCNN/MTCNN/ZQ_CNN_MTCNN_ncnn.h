@@ -106,9 +106,10 @@ namespace ZQ
 		}
 
 	public:
-		bool Init(const string& pnet_param, const string& pnet_model, const string& rnet_param, const string& rnet_model,
-			const string& onet_param, const string& onet_model, int thread_num = 1,
-			bool has_lnet = false, const string& lnet_param = "", const std::string& lnet_model = "")
+		bool Init(const std::string& pnet_param, const std::string& pnet_model, 
+			const std::string& rnet_param, const std::string& rnet_model,
+			const std::string& onet_param, const std::string& onet_model, int thread_num = 1,
+			bool has_lnet = false, const std::string& lnet_param = "", const std::string& lnet_model = "")
 		{
 			if (thread_num < 1)
 				force_run_pnet_multithread = true;
