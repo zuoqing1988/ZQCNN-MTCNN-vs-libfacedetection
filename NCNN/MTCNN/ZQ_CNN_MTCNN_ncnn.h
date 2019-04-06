@@ -929,7 +929,7 @@ namespace ZQ
 							block_end_h[bb] = (bh == block_num - 1) ? scoreH : ((bh + 1)*height_per_block);
 						}
 					}
-					int chunk_size = ceil((float)block_num / thread_num);
+					int chunk_size = 1;
 					if (thread_num <= 1)
 					{
 						for (int bb = 0; bb < block_num; bb++)
@@ -971,7 +971,7 @@ namespace ZQ
 					}
 					else
 					{
-#pragma omp parallel for schedule(static, chunk_size) num_threads(thread_num)
+#pragma omp parallel for schedule(dynamic, chunk_size) num_threads(thread_num)
 						for (int bb = 0; bb < block_num; bb++)
 						{
 							ZQ_CNN_BBox bbox;
