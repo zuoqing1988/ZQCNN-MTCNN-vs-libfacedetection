@@ -139,7 +139,7 @@ public:
 		{
 			printf("Pnet: %.3f ms nms: %.3f\n", 0.001*(t3 - t2), 0.001*(t4 - t3));
 			printf("Rnet[%d]: %.3f ms nms: %.3f\n", firstBbox_.size(), 0.001*(t5 - t4), 0.001*(t6 - t5));
-			printf("Onet[%d]: %.3f ms nms: %.3f\n", SecondBbox_.size(), 0.001*(t7 - t6), 0.001*(t8 - t7));
+			printf("Onet[%d]: %.3f ms nms: %.3f\n", secondBbox_.size(), 0.001*(t7 - t6), 0.001*(t8 - t7));
 			printf("final found: %d, cost: %.3d ms\n", finalBbox.size(), 0.001*(t8 - t1));
 		}
 	}
