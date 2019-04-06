@@ -6,6 +6,7 @@
 #ifndef __MTCNN_NCNN_H__
 #define __MTCNN_NCNN_H__
 #include "net.h"
+#include "cpu.h"
 //#include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
@@ -66,6 +67,18 @@ class MTCNN {
 public:
 	MTCNN(const string &model_path, int pnet_size = 20, int stride = 4)
 	{
+		static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
+		static ncnn::PoolAllocator g_workspace_pool_allocator;
+
+		ncnn::Option opt;
+		opt.lightmode = true;
+		opt.num_threads = 1;
+		opt.blob_allocator = &g_blob_pool_allocator;
+		opt.workspace_allocator = &g_workspace_pool_allocator;
+		ncnn::set_default_option(opt);
+		ncnn::set_cpu_powersave(0);
+		ncnn::set_omp_dynamic(0);
+		ncnn::set_omp_num_threads(1);
 
 		std::string param_files[3] = {
 			model_path + "/det1-dw20-fast.param",
@@ -91,6 +104,8 @@ public:
 		this->pnet_size = pnet_size, this->pnet_stride = stride;
 		//printf("hello4\n");
 		MIN_DET_SIZE = pnet_size;
+		g_blob_pool_allocator.clear();
+		g_workspace_pool_allocator.clear();
 	}
 	~MTCNN()
 	{
