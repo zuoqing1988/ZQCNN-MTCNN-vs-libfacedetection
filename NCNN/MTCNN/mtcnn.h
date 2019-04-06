@@ -212,7 +212,7 @@ private:
 		if (boundingBox_.empty()) {
 			return;
 		}
-		sort(boundingBox_.begin(), boundingBox_.end(), cmpScore);
+		sort(boundingBox_.begin(), boundingBox_.end(), MTCNN::cmpScore);
 		float IOU = 0;
 		float maxX = 0;
 		float maxY = 0;
