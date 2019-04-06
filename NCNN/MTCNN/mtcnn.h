@@ -67,27 +67,27 @@ public:
 	MTCNN(const string &model_path, int pnet_size = 20, int stride = 4)
 	{
 
-		std::vector<std::string> param_files = {
+		std::string param_files[3] = {
 			model_path + "/det1-dw20-fast.param",
 			model_path + "/det2-dw24-fast.param",
 			model_path + "/det3-dw48-fast.param"
 		};
 
-		std::vector<std::string> bin_files = {
+		std::string bin_files[3] = {
 			model_path + "/det1-dw20-fast.bin",
 			model_path + "/det2-dw24-fast.bin",
 			model_path + "/det3-dw48-fast.bin"
 		};
 		//printf("hello1\n");
-		Pnet.load_param(param_files[0].data());
+		Pnet.load_param(param_files[0].c_str());
 		//printf("hello1-1\n");
-		Pnet.load_model(bin_files[0].data());
+		Pnet.load_model(bin_files[0].c_str());
 		//printf("hello2\n");
-		Rnet.load_param(param_files[1].data());
-		Rnet.load_model(bin_files[1].data());
+		Rnet.load_param(param_files[1].c_str());
+		Rnet.load_model(bin_files[1].c_str());
 		//printf("hello3\n");
-		Onet.load_param(param_files[2].data());
-		Onet.load_model(bin_files[2].data());
+		Onet.load_param(param_files[2].c_str());
+		Onet.load_model(bin_files[2].c_str());
 		this->pnet_size = pnet_size, this->pnet_stride = stride;
 		//printf("hello4\n");
 		MIN_DET_SIZE = pnet_size;
