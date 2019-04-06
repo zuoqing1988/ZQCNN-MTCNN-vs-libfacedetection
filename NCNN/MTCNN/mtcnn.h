@@ -39,14 +39,14 @@ struct Bbox
 
 class MTCNN {
 
-	bool cmpScore(Bbox lsh, Bbox rsh) {
+	static bool cmpScore(Bbox lsh, Bbox rsh) {
 		if (lsh.score < rsh.score)
 			return true;
 		else
 			return false;
 	}
 
-	bool cmpArea(Bbox lsh, Bbox rsh) {
+	static bool cmpArea(Bbox lsh, Bbox rsh) {
 		if (lsh.area < rsh.area)
 			return false;
 		else
