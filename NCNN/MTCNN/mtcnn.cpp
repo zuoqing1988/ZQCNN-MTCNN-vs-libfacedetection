@@ -29,7 +29,7 @@ int main(int argc, const char** argv)
 	MTCNN mtcnn(model_path, 20, 4);
 
 	cv::Mat image;
-	image = cv::imread("../4.jpg");
+	image = cv::imread(argv[1]);
 	int out_it = 4;
 	int min_size = 20;
 
