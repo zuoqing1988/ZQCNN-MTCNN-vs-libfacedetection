@@ -36,6 +36,18 @@ struct Bbox
 	float regreCoord[4];
 };
 
+class ZQ_CNN_OrderScore
+	{
+	public:
+		float score;
+		int oriOrder;
+
+		ZQ_CNN_OrderScore()
+		{
+			memset(this, 0, sizeof(ZQ_CNN_OrderScore));
+		}
+	};
+
 bool cmpScore(Bbox lsh, Bbox rsh) {
 		if (lsh.score < rsh.score)
 			return true;
@@ -43,13 +55,11 @@ bool cmpScore(Bbox lsh, Bbox rsh) {
 			return false;
 	}
 	
-bool cmpArea(Bbox lsh, Bbox rsh) {
-		if (lsh.area < rsh.area)
-			return false;
-		else
-			return true;
-	}
-
+	static bool _cmp_score(const ZQ_CNN_OrderScore& lsh, const ZQ_CNN_OrderScore& rsh)
+		{
+			return lsh.score < rsh.score;
+		}
+	
 class MTCNN {
 
 public:
@@ -206,61 +216,102 @@ private:
 		}
 		//std::cout << boundingBox_.size() << std::endl;
 	}
-	void nms(vector<Bbox> &boundingBox_, const float overlap_threshold, string modelname = "Union")
-	{
-		if (boundingBox_.empty()) {
-			return;
-		}
-		sort(boundingBox_.begin(), boundingBox_.end(), cmpScore);
-		float IOU = 0;
-		float maxX = 0;
-		float maxY = 0;
-		float minX = 0;
-		float minY = 0;
-		std::vector<int> vPick;
-		int nPick = 0;
-		std::multimap<float, int> vScores;
-		const int num_boxes = boundingBox_.size();
-		vPick.resize(num_boxes);
-		for (int i = 0; i < num_boxes; ++i) {
-			vScores.insert(std::pair<float, int>(boundingBox_[i].score, i));
-		}
-		while (vScores.size() > 0) {
-			int last = vScores.rbegin()->second;
-			vPick[nPick] = last;
-			nPick += 1;
-			for (std::multimap<float, int>::iterator it = vScores.begin(); it != vScores.end();) {
-				int it_idx = it->second;
-				maxX = __max(boundingBox_.at(it_idx).x1, boundingBox_.at(last).x1);
-				maxY = __max(boundingBox_.at(it_idx).y1, boundingBox_.at(last).y1);
-				minX = __min(boundingBox_.at(it_idx).x2, boundingBox_.at(last).x2);
-				minY = __min(boundingBox_.at(it_idx).y2, boundingBox_.at(last).y2);
-				//maxX1 and maxY1 reuse 
-				maxX = ((minX - maxX + 1) > 0) ? (minX - maxX + 1) : 0;
-				maxY = ((minY - maxY + 1) > 0) ? (minY - maxY + 1) : 0;
-				//IOU reuse for the area of two bbox
-				IOU = maxX * maxY;
-				if (!modelname.compare("Union"))
-					IOU = IOU / (boundingBox_.at(it_idx).area + boundingBox_.at(last).area - IOU);
-				else if (!modelname.compare("Min")) {
-					IOU = IOU / ((boundingBox_.at(it_idx).area < boundingBox_.at(last).area) ? boundingBox_.at(it_idx).area : boundingBox_.at(last).area);
-				}
-				if (IOU > overlap_threshold) {
-					it = vScores.erase(it);
-				}
-				else {
-					it++;
+	
+		static void _nms(std::vector<Bbox> &boundingBox, std::vector<ZQ_CNN_OrderScore> &bboxScore, const float overlap_threshold, 
+			const std::string& modelname = "Union", int overlap_count_thresh = 0)
+		{
+	if (boundingBox.empty() || overlap_threshold >= 1.0)
+			{
+				return;
+			}
+			std::vector<int> heros;
+			std::vector<int> overlap_num;
+			//sort the score
+			sort(bboxScore.begin(), bboxScore.end(), _cmp_score);
+
+			int order = 0;
+			float IOU = 0;
+			float maxX = 0;
+			float maxY = 0;
+			float minX = 0;
+			float minY = 0;
+			while (bboxScore.size() > 0)
+			{
+				order = bboxScore.back().oriOrder;
+				bboxScore.pop_back();
+				if (order < 0)continue;
+				heros.push_back(order);
+				int cur_overlap = 0;
+				boundingBox[order].exist = false;//delete it
+				int box_num = boundingBox.size();
+				for (int num = 0; num < box_num; num++)
+					{
+						if (boundingBox[num].exist)
+						{
+							//the iou
+							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
+							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
+							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
+							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
+							//maxX1 and maxY1 reuse 
+							maxX = __max(minX - maxX + 1, 0);
+							maxY = __max(minY - maxY + 1, 0);
+							//IOU reuse for the area of two bbox
+							IOU = maxX * maxY;
+							float area1 = boundingBox[num].area;
+							float area2 = boundingBox[order].area;
+							if (!modelname.compare("Union"))
+								IOU = IOU / (area1 + area2 - IOU);
+							else if (!modelname.compare("Min"))
+							{
+								IOU = IOU / __min(area1, area2);
+							}
+							if (IOU > overlap_threshold)
+							{
+								cur_overlap++;
+								boundingBox[num].exist = false;
+								for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
+								{
+									if ((*it).oriOrder == num)
+									{
+										(*it).oriOrder = -1;
+										break;
+									}
+								}
+							}
+						}
+					}
+				
+				overlap_num.push_back(cur_overlap);
+			}
+			for (int i = 0; i < heros.size(); i++)
+			{
+				if(!boundingBox[heros[i]].need_check_overlap_count 
+					|| overlap_num[i] >= overlap_count_thresh)
+					boundingBox[heros[i]].exist = true;
+			}
+			//clear exist= false;
+			for (int i = boundingBox.size() - 1; i >= 0; i--)
+			{
+				if (!boundingBox[i].exist)
+				{
+					boundingBox.erase(boundingBox.begin() + i);
 				}
 			}
+	}
+	void nms(vector<Bbox> &boundingBox_, const float overlap_threshold, string modelname = "Union")
+	{
+		int num = boundingBox_.size();
+		if(num == 0)
+			return ;
+		std::vector<ZQ_CNN_OrderScore> order_score(num);
+		for(int i = 0;i < num;i++)
+		{
+			order_score[i].score = boundingBox_.score;
+			order_score[i].oriOrder = i;
 		}
-
-		vPick.resize(nPick);
-		std::vector<Bbox> tmp_;
-		tmp_.resize(nPick);
-		for (int i = 0; i < nPick; i++) {
-			tmp_[i] = boundingBox_[vPick[i]];
-		}
-		boundingBox_ = tmp_;
+		_nms(boundingBox_, order_score, overlap_threshold, modelname,0);
+		
 	}
 
 	void refine(vector<Bbox> &vecBbox, const int &height, const int &width, bool square)
