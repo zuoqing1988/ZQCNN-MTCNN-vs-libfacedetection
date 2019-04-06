@@ -2,13 +2,226 @@
 #define _ZQ_CNN_MTCNN_H_
 #pragma once
 #include "net.h"
-#include "ZQ_CNN_BBoxUtils.h"
+#include "ZQ_CNN_BBox.h"
+#include <algorithm>
 #include <omp.h>
 
 namespace ZQ
 {
 	class ZQ_CNN_MTCNN_ncnn
 	{
+		static bool _cmp_score(const ZQ_CNN_OrderScore& lsh, const ZQ_CNN_OrderScore& rsh)
+		{
+			return lsh.score < rsh.score;
+		}
+
+		static void _nms(std::vector<ZQ_CNN_BBox> &boundingBox, std::vector<ZQ_CNN_OrderScore> &bboxScore, const float overlap_threshold,
+			const std::string& modelname = "Union", int overlap_count_thresh = 0, int thread_num = 1)
+		{
+			if (boundingBox.empty() || overlap_threshold >= 1.0)
+			{
+				return;
+			}
+			std::vector<int> heros;
+			std::vector<int> overlap_num;
+			//sort the score
+			sort(bboxScore.begin(), bboxScore.end(), _cmp_score);
+
+			int order = 0;
+			float IOU = 0;
+			float maxX = 0;
+			float maxY = 0;
+			float minX = 0;
+			float minY = 0;
+			while (bboxScore.size() > 0)
+			{
+				order = bboxScore.back().oriOrder;
+				bboxScore.pop_back();
+				if (order < 0)continue;
+				heros.push_back(order);
+				int cur_overlap = 0;
+				boundingBox[order].exist = false;//delete it
+				int box_num = boundingBox.size();
+				if (thread_num == 1)
+				{
+					for (int num = 0; num < box_num; num++)
+					{
+						if (boundingBox[num].exist)
+						{
+							//the iou
+							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
+							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
+							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
+							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
+							//maxX1 and maxY1 reuse 
+							maxX = __max(minX - maxX + 1, 0);
+							maxY = __max(minY - maxY + 1, 0);
+							//IOU reuse for the area of two bbox
+							IOU = maxX * maxY;
+							float area1 = boundingBox[num].area;
+							float area2 = boundingBox[order].area;
+							if (!modelname.compare("Union"))
+								IOU = IOU / (area1 + area2 - IOU);
+							else if (!modelname.compare("Min"))
+							{
+								IOU = IOU / __min(area1, area2);
+							}
+							if (IOU > overlap_threshold)
+							{
+								cur_overlap++;
+								boundingBox[num].exist = false;
+								for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
+								{
+									if ((*it).oriOrder == num)
+									{
+										(*it).oriOrder = -1;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					int chunk_size = ceil(box_num / thread_num);
+#pragma omp parallel for schedule(static, chunk_size) num_threads(thread_num)
+					for (int num = 0; num < box_num; num++)
+					{
+						if (boundingBox.at(num).exist)
+						{
+							//the iou
+							maxY = __max(boundingBox[num].row1, boundingBox[order].row1);
+							maxX = __max(boundingBox[num].col1, boundingBox[order].col1);
+							minY = __min(boundingBox[num].row2, boundingBox[order].row2);
+							minX = __min(boundingBox[num].col2, boundingBox[order].col2);
+							//maxX1 and maxY1 reuse 
+							maxX = __max(minX - maxX + 1, 0);
+							maxY = __max(minY - maxY + 1, 0);
+							//IOU reuse for the area of two bbox
+							IOU = maxX * maxY;
+							float area1 = boundingBox[num].area;
+							float area2 = boundingBox[order].area;
+							if (!modelname.compare("Union"))
+								IOU = IOU / (area1 + area2 - IOU);
+							else if (!modelname.compare("Min"))
+							{
+								IOU = IOU / __min(area1, area2);
+							}
+							if (IOU > overlap_threshold)
+							{
+								cur_overlap++;
+								boundingBox.at(num).exist = false;
+								for (std::vector<ZQ_CNN_OrderScore>::iterator it = bboxScore.begin(); it != bboxScore.end(); it++)
+								{
+									if ((*it).oriOrder == num)
+									{
+										(*it).oriOrder = -1;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+				overlap_num.push_back(cur_overlap);
+			}
+			for (int i = 0; i < heros.size(); i++)
+			{
+				if (!boundingBox[heros[i]].need_check_overlap_count
+					|| overlap_num[i] >= overlap_count_thresh)
+					boundingBox[heros[i]].exist = true;
+			}
+			//clear exist= false;
+			for (int i = boundingBox.size() - 1; i >= 0; i--)
+			{
+				if (!boundingBox[i].exist)
+				{
+					boundingBox.erase(boundingBox.begin() + i);
+				}
+			}
+		}
+
+		static void _refine_and_square_bbox(std::vector<ZQ_CNN_BBox> &vecBbox, const int width, const int height,
+			bool square = true)
+		{
+			float bbw = 0, bbh = 0, bboxSize = 0;
+			float h = 0, w = 0;
+			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+			for (std::vector<ZQ_CNN_BBox>::iterator it = vecBbox.begin(); it != vecBbox.end(); it++)
+			{
+				if ((*it).exist)
+				{
+					bbh = (*it).row2 - (*it).row1 + 1;
+					bbw = (*it).col2 - (*it).col1 + 1;
+					y1 = (*it).row1 + (*it).regreCoord[1] * bbh;
+					x1 = (*it).col1 + (*it).regreCoord[0] * bbw;
+					y2 = (*it).row2 + (*it).regreCoord[3] * bbh;
+					x2 = (*it).col2 + (*it).regreCoord[2] * bbw;
+
+					w = x2 - x1 + 1;
+					h = y2 - y1 + 1;
+					if (square)
+					{
+						bboxSize = (h > w) ? h : w;
+						y1 = y1 + h*0.5 - bboxSize*0.5;
+						x1 = x1 + w*0.5 - bboxSize*0.5;
+						(*it).row2 = round(y1 + bboxSize - 1);
+						(*it).col2 = round(x1 + bboxSize - 1);
+						(*it).row1 = round(y1);
+						(*it).col1 = round(x1);
+					}
+					else
+					{
+						(*it).row2 = round(y1 + h - 1);
+						(*it).col2 = round(x1 + w - 1);
+						(*it).row1 = round(y1);
+						(*it).col1 = round(x1);
+					}
+
+					//boundary check
+					/*if ((*it).row1 < 0)(*it).row1 = 0;
+					if ((*it).col1 < 0)(*it).col1 = 0;
+					if ((*it).row2 > height)(*it).row2 = height - 1;
+					if ((*it).col2 > width)(*it).col2 = width - 1;*/
+
+					it->area = (it->row2 - it->row1)*(it->col2 - it->col1);
+				}
+			}
+		}
+
+		static void _square_bbox(std::vector<ZQ_CNN_BBox> &vecBbox, const int width, const int height)
+		{
+			float bbw = 0, bbh = 0, bboxSize = 0;
+			float h = 0, w = 0;
+			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+			for (std::vector<ZQ_CNN_BBox>::iterator it = vecBbox.begin(); it != vecBbox.end(); it++)
+			{
+				if ((*it).exist)
+				{
+					y1 = (*it).row1;
+					x1 = (*it).col1;
+					h = (*it).row2 - (*it).row1 + 1;
+					w = (*it).col2 - (*it).col1 + 1;
+					bboxSize = (h > w) ? h : w;
+					y1 = y1 + h*0.5 - bboxSize*0.5;
+					x1 = x1 + w*0.5 - bboxSize*0.5;
+					(*it).row2 = round(y1 + bboxSize - 1);
+					(*it).col2 = round(x1 + bboxSize - 1);
+					(*it).row1 = round(y1);
+					(*it).col1 = round(x1);
+
+					//boundary check
+					/*if ((*it).row1 < 0)(*it).row1 = 0;
+					if ((*it).col1 < 0)(*it).col1 = 0;
+					if ((*it).row2 > height)(*it).row2 = height - 1;
+					if ((*it).col2 > width)(*it).col2 = width - 1;*/
+
+					it->area = (it->row2 - it->row1)*(it->col2 - it->col1);
+				}
+			}
+		}
+
 	public:
 		ZQ_CNN_MTCNN_ncnn()
 		{
@@ -617,7 +830,7 @@ namespace ZQ
 						}
 					}
 					int before_count = bounding_boxes[i].size();
-					ZQ_CNN_BBoxUtils::_nms(bounding_boxes[i], bounding_scores[i], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
+					_nms(bounding_boxes[i], bounding_scores[i], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
 					int after_count = bounding_boxes[i].size();
 					for (int j = 0; j < after_count; j++)
 					{
@@ -689,7 +902,7 @@ namespace ZQ
 								}
 							}
 							int tmp_before_count = tmp_bounding_boxes[bb].size();
-							ZQ_CNN_BBoxUtils::_nms(tmp_bounding_boxes[bb], tmp_bounding_scores[bb], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
+							_nms(tmp_bounding_boxes[bb], tmp_bounding_scores[bb], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
 							int tmp_after_count = tmp_bounding_boxes[bb].size();
 							before_count += tmp_before_count;
 							after_count += tmp_after_count;
@@ -729,7 +942,7 @@ namespace ZQ
 								}
 							}
 							int tmp_before_count = tmp_bounding_boxes[bb].size();
-							ZQ_CNN_BBoxUtils::_nms(tmp_bounding_boxes[bb], tmp_bounding_scores[bb], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
+							_nms(tmp_bounding_boxes[bb], tmp_bounding_scores[bb], nms_thresh_per_scale, "Union", pnet_overlap_thresh_count);
 							int tmp_after_count = tmp_bounding_boxes[bb].size();
 							before_count += tmp_before_count;
 							after_count += tmp_after_count;
@@ -793,8 +1006,8 @@ namespace ZQ
 			//the first stage's nms
 			if (count < 1) return false;
 			double t15 = omp_get_wtime();
-			ZQ_CNN_BBoxUtils::_nms(firstBbox, firstOrderScore, nms_thresh[0], "Union", 0, 1);
-			ZQ_CNN_BBoxUtils::_refine_and_square_bbox(firstBbox, width, height, true);
+			_nms(firstBbox, firstOrderScore, nms_thresh[0], "Union", 0, 1);
+			_refine_and_square_bbox(firstBbox, width, height, true);
 			double t16 = omp_get_wtime();
 			if (show_debug_info)
 				printf("nms cost: %.3f ms\n", 1000 * (t16 - t15));
@@ -911,9 +1124,9 @@ namespace ZQ
 				secondScore[i].oriOrder = i;
 			}
 
-			//ZQ_CNN_BBoxUtils::_nms(secondBbox, secondScore, nms_thresh[1], "Union");
-			ZQ_CNN_BBoxUtils::_nms(secondBbox, secondScore, nms_thresh[1], "Min");
-			ZQ_CNN_BBoxUtils::_refine_and_square_bbox(secondBbox, width, height, true);
+			//_nms(secondBbox, secondScore, nms_thresh[1], "Union");
+			_nms(secondBbox, secondScore, nms_thresh[1], "Min");
+			_refine_and_square_bbox(secondBbox, width, height, true);
 			count = secondBbox.size();
 
 			double t4 = omp_get_wtime();
@@ -1032,8 +1245,8 @@ namespace ZQ
 				thirdScore[i].oriOrder = i;
 			}
 
-			ZQ_CNN_BBoxUtils::_nms(thirdBbox, thirdScore, nms_thresh[2], "Min");
-			ZQ_CNN_BBoxUtils::_refine_and_square_bbox(thirdBbox, width, height, true);
+			_nms(thirdBbox, thirdScore, nms_thresh[2], "Min");
+			_refine_and_square_bbox(thirdBbox, width, height, true);
 			count = thirdBbox.size();
 
 			double t4 = omp_get_wtime();
